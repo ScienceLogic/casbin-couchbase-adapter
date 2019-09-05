@@ -7,7 +7,11 @@ Couchbase storage adapter for PyCasbin
 
 ```
 pip install casbin_couchbase_adapter
+
+# Create secondary index in Couchbase to support N1QL queries
+CREATE INDEX idx_casbin ON content(meta().id, ptype) WHERE meta().id LIKE "casbin_rule%"
 ```
+
 
 ## Simple Example
 
