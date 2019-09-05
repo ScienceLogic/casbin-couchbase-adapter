@@ -1,0 +1,2 @@
+casbin>=0.2
+couchbase
