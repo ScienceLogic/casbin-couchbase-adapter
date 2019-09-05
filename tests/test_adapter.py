@@ -1,4 +1,5 @@
 import os
+import time
 import csv
 import pytest
 import casbin
@@ -19,9 +20,9 @@ def enforcer_fixture(adapter_fixture):
     ) as file:
         csv_reader = csv.reader(file, delimiter=',')
         for line in csv_reader:
-            print(line)
             record = CasbinRule(ptype=line[0], values=line[1::])
             adapter_fixture._bucket.upsert(record.id, record.__dict__())
+    time.sleep(1)
 
     yield casbin.Enforcer(os.path.split(
         os.path.realpath(__file__))[0] + "/rbac_model.conf", adapter_fixture)
@@ -29,9 +30,10 @@ def enforcer_fixture(adapter_fixture):
     # remove rules
     adapter_fixture._cluster.n1ql_query(
         N1QLQuery(
-            r'DELETE FROM content WHERE meta().id LIKE "casbin_rule%"'
+            r'DELETE FROM content WHERE meta().id LIKE "casbin_rule%%"'
         )
-    )
+    ).execute()
+    time.sleep(1)
 
 
 @pytest.mark.parametrize(
