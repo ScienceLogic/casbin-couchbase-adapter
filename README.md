@@ -41,5 +41,4 @@ else:
 TBD
 
 ### TODO
-* tests
 * logging
