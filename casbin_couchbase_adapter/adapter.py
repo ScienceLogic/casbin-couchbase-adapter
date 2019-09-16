@@ -2,6 +2,7 @@
    TODO:
     * Logging
 """
+from hashlib import sha256
 from casbin import persist
 from couchbase.cluster import Cluster, PasswordAuthenticator
 from couchbase.n1ql import N1QLQuery
@@ -13,7 +14,7 @@ class CasbinRule:
     values = []
 
     def __init__(self, ptype: str, values: list):
-        self.id = '%s_%s' % (self.id, '_'.join(values))
+        self.id = '%s_%s' % (self.id, sha256('_'.join(values).encode()).hexdigest())
         self.ptype = ptype
         self.values = values
 
@@ -81,7 +82,7 @@ class Adapter(persist.Adapter):
         """removes a policy rule from the storage."""
         try:
             self._bucket.remove(
-                '%s_%s' % ('casbin_rule', '_'.join(rule))
+                '%s_%s' % ('casbin_rule', sha256('_'.join(rule).encode()).hexdigest())
             )
         except Exception:
             return False
