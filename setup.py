@@ -14,9 +14,10 @@ setuptools.setup(
     keywords=["casbin", "Couchbase", "casbin-adapter", "rbac", "access control", "abac", "acl", "permission"],
     packages=setuptools.find_packages(),
     install_requires=['casbin>=0.2', 'couchbase'],
-    python_requires=">=3.6",
+    python_requires=">=3.5",
     license="Apache 2.0",
     classifiers=[
+        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "License :: OSI Approved :: Apache Software License",
