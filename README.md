@@ -35,14 +35,28 @@ else:
     pass
 ```
 
+## Development
 
-### Getting Help
+1. Fork
+2. Install Dev ENV
+```python
+# Install Flask-Casbin with Dev packages
+pip install -r dev_requirements.txt
+pip install -r requirements.txt
+pip install -e .
+# Install Pre-commits
+pre-commit install
+# Create feature branch
+git checkout -b feature-more-cool-stuff
+# Code stuff
+```
+Then push your changes and create a PR
 
-- [PyCasbin](https://github.com/casbin/pycasbin)
-
-### License
-
-TBD
-
-### TODO
-* logging
+#### Manually Bump Version
+```
+bumpversion major  # major release
+or
+bumpversion minor  # minor release
+or
+bumpversion patch  # hotfix release
+```
