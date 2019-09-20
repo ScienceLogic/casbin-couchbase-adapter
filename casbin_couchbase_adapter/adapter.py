@@ -9,23 +9,20 @@ from couchbase.n1ql import N1QLQuery
 
 
 class CasbinRule:
-    id = 'casbin_rule'
-    ptype = ''
+    id = "casbin_rule"
+    ptype = ""
     values = []
 
     def __init__(self, ptype: str, values: list):
-        self.id = '%s_%s' % (self.id, sha256('_'.join(values).encode()).hexdigest())
+        self.id = "%s_%s" % (self.id, sha256("_".join(values).encode()).hexdigest())
         self.ptype = ptype
         self.values = values
 
     def __str__(self):
-        return '%s, %s' % (self.ptype, ', '.join(self.values))
+        return "%s, %s" % (self.ptype, ", ".join(self.values))
 
     def __dict__(self):
-        return {
-            'ptype': self.ptype,
-            'values': self.values
-        }
+        return {"ptype": self.ptype, "values": self.values}
 
     def __repr__(self):
         return '<CasbinRule {}: "{}">'.format(self.id, str(self))
@@ -36,10 +33,7 @@ class Adapter(persist.Adapter):
 
     def __init__(self, host, bucket, user, passwd):
         self._cluster = Cluster(host)
-        authenticator = PasswordAuthenticator(
-            user,
-            passwd
-        )
+        authenticator = PasswordAuthenticator(user, passwd)
         self._cluster.authenticate(authenticator)
         self._bucket_name = bucket
         self._bucket = self._cluster.open_bucket(bucket)
@@ -48,20 +42,19 @@ class Adapter(persist.Adapter):
         """loads all policy rules from the storage."""
         lines = self._cluster.n1ql_query(
             N1QLQuery(
-                r'SELECT meta().id, ptype, `values` FROM %s WHERE meta().id LIKE "casbin_rule%%"' % self._bucket_name
+                r'SELECT meta().id, ptype, `values` FROM %s WHERE meta().id LIKE "casbin_rule%%"'
+                % self._bucket_name
             )
         )
         for line in lines:
-            rule = CasbinRule(ptype=line['ptype'], values=line['values'])
-            persist.load_policy_line(
-                str(rule), model
-            )
+            rule = CasbinRule(ptype=line["ptype"], values=line["values"])
+            persist.load_policy_line(str(rule), model)
 
     def _save_policy_line(self, ptype, rule):
         line = CasbinRule(ptype=ptype, values=rule)
         line.values = rule
         # TODO: add try block
-        #self._bucket.mutate_in(line.id, subdocument.upsert(line.__dict__()))
+        # self._bucket.mutate_in(line.id, subdocument.upsert(line.__dict__()))
         self._bucket.upsert(line.id, line.__dict__())
 
     def save_policy(self, model):
@@ -82,7 +75,7 @@ class Adapter(persist.Adapter):
         """removes a policy rule from the storage."""
         try:
             self._bucket.remove(
-                '%s_%s' % ('casbin_rule', sha256('_'.join(rule).encode()).hexdigest())
+                "%s_%s" % ("casbin_rule", sha256("_".join(rule).encode()).hexdigest())
             )
         except Exception:
             return False
@@ -94,4 +87,3 @@ class Adapter(persist.Adapter):
         This is part of the Auto-Save feature.
         """
         pass
-
