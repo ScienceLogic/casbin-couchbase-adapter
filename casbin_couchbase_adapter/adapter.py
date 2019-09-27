@@ -6,6 +6,7 @@ from hashlib import sha256
 from casbin import persist
 from couchbase.cluster import Cluster, PasswordAuthenticator
 from couchbase.n1ql import N1QLQuery
+from couchbase.n1ql import CONSISTENCY_REQUEST
 
 
 class CasbinRule:
@@ -40,12 +41,12 @@ class Adapter(persist.Adapter):
 
     def load_policy(self, model):
         """loads all policy rules from the storage."""
-        lines = self._cluster.n1ql_query(
-            N1QLQuery(
+        q = N1QLQuery(
                 r'SELECT meta().id, ptype, `values` FROM %s WHERE meta().id LIKE "casbin_rule%%"'
                 % self._bucket_name
-            )
-        )
+        	)
+        q.consistency = CONSISTENCY_REQUEST
+        lines = self._cluster.n1ql_query(q)
         for line in lines:
             rule = CasbinRule(ptype=line["ptype"], values=line["values"])
             persist.load_policy_line(str(rule), model)
