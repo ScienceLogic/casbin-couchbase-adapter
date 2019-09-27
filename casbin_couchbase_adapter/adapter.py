@@ -42,9 +42,9 @@ class Adapter(persist.Adapter):
     def load_policy(self, model):
         """loads all policy rules from the storage."""
         q = N1QLQuery(
-                r'SELECT meta().id, ptype, `values` FROM %s WHERE meta().id LIKE "casbin_rule%%"'
-                % self._bucket_name
-        	)
+            r'SELECT meta().id, ptype, `values` FROM %s WHERE meta().id LIKE "casbin_rule%%"'
+            % self._bucket_name
+        )
         q.consistency = CONSISTENCY_REQUEST
         lines = self._cluster.n1ql_query(q)
         for line in lines:
