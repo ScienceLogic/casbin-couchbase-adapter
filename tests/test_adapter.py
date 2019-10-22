@@ -21,7 +21,8 @@ def enforcer_fixture(adapter_fixture):
         csv_reader = csv.reader(file, delimiter=",")
         for line in csv_reader:
             record = CasbinRule(ptype=line[0], values=line[1::])
-            adapter_fixture._bucket.upsert(record.id, record.__dict__())
+            bucket = adapter_fixture.get_bucket()
+            bucket.upsert(record.id, record.__dict__())
     time.sleep(1)
 
     yield casbin.Enforcer(
@@ -30,7 +31,7 @@ def enforcer_fixture(adapter_fixture):
     )
 
     # remove rules
-    adapter_fixture._cluster.n1ql_query(
+    bucket.n1ql_query(
         N1QLQuery(r'DELETE FROM content WHERE meta().id LIKE "casbin_rule%%"')
     ).execute()
     time.sleep(1)
@@ -92,7 +93,7 @@ def test_repr():
     rule = CasbinRule(ptype="p", values=["alice", "data1", "read"])
     assert (
         repr(rule)
-        == '<CasbinRule casbin_rule_alice_data1_read: "p, alice, data1, read">'
+        == '<CasbinRule casbin_rule_46ab8754f52a0eb6707cdd15df72b1d409dfdeaa40e7342c1713e7582f3e7dd4: "p, alice, data1, read">'
     )
 
 
