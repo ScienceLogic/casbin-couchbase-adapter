@@ -8,6 +8,7 @@ from casbin import persist
 from couchbase.cluster import Cluster, PasswordAuthenticator
 from couchbase.exceptions import CouchbaseNetworkError
 from couchbase.n1ql import N1QLQuery
+from couchbase.n1ql import CONSISTENCY_REQUEST
 
 
 class CasbinPoliciesNotFound(Exception):
@@ -66,6 +67,7 @@ class Adapter(persist.Adapter):
             r'SELECT meta().id, ptype, `values` FROM %s WHERE meta().id LIKE "casbin_rule%%"'
             % self._bucket_name
         )
+        query.consistency = CONSISTENCY_REQUEST
         try:
             lines = bucket.n1ql_query(query)
         except CouchbaseNetworkError:
