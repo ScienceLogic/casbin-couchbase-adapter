@@ -1,11 +1,17 @@
 """Adapter: Casbin Couchbase Adapter
    TODO:
     * Logging
+    * Add retry
 """
 from hashlib import sha256
 from casbin import persist
 from couchbase.cluster import Cluster, PasswordAuthenticator
+from couchbase.exceptions import CouchbaseNetworkError
 from couchbase.n1ql import N1QLQuery
+
+
+class CasbinPoliciesNotFound(Exception):
+    pass
 
 
 class CasbinRule:
@@ -30,22 +36,42 @@ class CasbinRule:
 
 class Adapter(persist.Adapter):
     """the interface for Casbin adapters."""
+    __bucket = None
 
     def __init__(self, host, bucket, user, passwd):
         self._cluster = Cluster(host)
         authenticator = PasswordAuthenticator(user, passwd)
         self._cluster.authenticate(authenticator)
         self._bucket_name = bucket
-        self._bucket = self._cluster.open_bucket(bucket)
+
+    @property
+    def _bucket(self):
+        return self.__bucket
+
+    @_bucket.setter
+    def _bucket(self, conn):
+        self.__bucket = conn
+
+    def get_bucket(self, refresh_conn=False):
+        if self._bucket and not refresh_conn:
+            return self._bucket
+        else:
+            self._bucket = self._cluster.open_bucket(self._bucket_name)
+            return self._bucket
 
     def load_policy(self, model):
         """loads all policy rules from the storage."""
-        lines = self._cluster.n1ql_query(
-            N1QLQuery(
-                r'SELECT meta().id, ptype, `values` FROM %s WHERE meta().id LIKE "casbin_rule%%"'
-                % self._bucket_name
-            )
+        bucket = self.get_bucket()
+        query = N1QLQuery(
+            r'SELECT meta().id, ptype, `values` FROM %s WHERE meta().id LIKE "casbin_rule%%"'
+            % self._bucket_name
         )
+        try:
+            lines = bucket.n1ql_query(query)
+        except CouchbaseNetworkError:
+            # refresh stale connection
+            bucket = self.get_bucket(refresh_conn=True)
+            lines = bucket.n1ql_query(query)
         for line in lines:
             rule = CasbinRule(ptype=line["ptype"], values=line["values"])
             persist.load_policy_line(str(rule), model)
@@ -53,9 +79,13 @@ class Adapter(persist.Adapter):
     def _save_policy_line(self, ptype, rule):
         line = CasbinRule(ptype=ptype, values=rule)
         line.values = rule
-        # TODO: add try block
-        # self._bucket.mutate_in(line.id, subdocument.upsert(line.__dict__()))
-        self._bucket.upsert(line.id, line.__dict__())
+        bucket = self.get_bucket()
+        try:
+            bucket.upsert(line.id, line.__dict__())
+        except CouchbaseNetworkError:
+            # refresh stale connection
+            bucket = self.get_bucket(refresh_conn=True)
+            bucket.upsert(line.id, line.__dict__())
 
     def save_policy(self, model):
         """saves all policy rules to the storage."""
@@ -73,10 +103,14 @@ class Adapter(persist.Adapter):
 
     def remove_policy(self, sec, ptype, rule):
         """removes a policy rule from the storage."""
+        bucket = self.get_bucket()
+        query = "%s_%s" % ("casbin_rule", sha256("_".join(rule).encode()).hexdigest())
         try:
-            self._bucket.remove(
-                "%s_%s" % ("casbin_rule", sha256("_".join(rule).encode()).hexdigest())
-            )
+            bucket.remove(query)
+        except CouchbaseNetworkError:
+            # refresh stale connection
+            bucket = self.get_bucket(refresh_conn=True)
+            bucket.remove(query)
         except Exception:
             return False
         else:
