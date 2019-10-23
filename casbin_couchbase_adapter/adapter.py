@@ -37,6 +37,7 @@ class CasbinRule:
 
 class Adapter(persist.Adapter):
     """the interface for Casbin adapters."""
+
     __bucket = None
 
     def __init__(self, host, bucket, user, passwd):
@@ -64,19 +65,20 @@ class Adapter(persist.Adapter):
         """loads all policy rules from the storage."""
         bucket = self.get_bucket()
         query = N1QLQuery(
-            r'SELECT meta().id, ptype, `values` FROM %s WHERE meta().id LIKE "casbin_rule%%"'
-            % self._bucket_name
+            r"SELECT meta().id, ptype, `values` FROM %s WHERE meta().id "
+            r'LIKE "casbin_rule%%"' % self._bucket_name
         )
         query.consistency = CONSISTENCY_REQUEST
         try:
-            lines = bucket.n1ql_query(query)
+            for line in bucket.n1ql_query(query):
+                rule = CasbinRule(ptype=line["ptype"], values=line["values"])
+                persist.load_policy_line(str(rule), model)
         except CouchbaseNetworkError:
             # refresh stale connection
             bucket = self.get_bucket(refresh_conn=True)
-            lines = bucket.n1ql_query(query)
-        for line in lines:
-            rule = CasbinRule(ptype=line["ptype"], values=line["values"])
-            persist.load_policy_line(str(rule), model)
+            for line in bucket.n1ql_query(query):
+                rule = CasbinRule(ptype=line["ptype"], values=line["values"])
+                persist.load_policy_line(str(rule), model)
 
     def _save_policy_line(self, ptype, rule):
         line = CasbinRule(ptype=ptype, values=rule)
