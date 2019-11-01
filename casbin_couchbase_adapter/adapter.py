@@ -4,9 +4,14 @@
     * Add retry
 """
 from hashlib import sha256
+from retry import retry
 from casbin import persist
 from couchbase.cluster import Cluster, PasswordAuthenticator
-from couchbase.exceptions import CouchbaseNetworkError
+from couchbase.exceptions import (
+    CouchbaseNetworkError,
+    CouchbaseTransientError,
+    HTTPError,
+)
 from couchbase.n1ql import N1QLQuery
 from couchbase.n1ql import CONSISTENCY_REQUEST
 
@@ -61,6 +66,7 @@ class Adapter(persist.Adapter):
             self._bucket = self._cluster.open_bucket(self._bucket_name)
             return self._bucket
 
+    @retry(HTTPError, tries=4, delay=1, backoff=1, max_delay=4)
     def load_policy(self, model):
         """loads all policy rules from the storage."""
         bucket = self.get_bucket()
@@ -73,7 +79,7 @@ class Adapter(persist.Adapter):
             for line in bucket.n1ql_query(query):
                 rule = CasbinRule(ptype=line["ptype"], values=line["values"])
                 persist.load_policy_line(str(rule), model)
-        except CouchbaseNetworkError:
+        except (CouchbaseNetworkError, CouchbaseTransientError):
             # refresh stale connection
             bucket = self.get_bucket(refresh_conn=True)
             for line in bucket.n1ql_query(query):
