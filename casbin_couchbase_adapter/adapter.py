@@ -66,7 +66,7 @@ class Adapter(persist.Adapter):
             self._bucket = self._cluster.open_bucket(self._bucket_name)
             return self._bucket
 
-    @retry(HTTPError, tries=10, delay=1, backoff=1, max_delay=4)
+    @retry(HTTPError, tries=10, delay=1, backoff=1, max_delay=5)
     def load_policy(self, model):
         """loads all policy rules from the storage."""
         bucket = self.get_bucket()
