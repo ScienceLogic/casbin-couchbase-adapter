@@ -13,7 +13,7 @@ from couchbase.exceptions import (
     HTTPError,
 )
 from couchbase.n1ql import N1QLQuery
-from couchbase.n1ql import REQUEST_PLUS
+from couchbase.n1ql import STATEMENT_PLUS
 
 
 class CasbinPoliciesNotFound(Exception):
@@ -74,7 +74,7 @@ class Adapter(persist.Adapter):
             r"SELECT meta().id, ptype, `values` FROM %s WHERE meta().id "
             r'LIKE "casbin_rule%%"' % self._bucket_name
         )
-        query.consistency = REQUEST_PLUS
+        query.consistency = STATEMENT_PLUS
         try:
             for line in bucket.n1ql_query(query):
                 rule = CasbinRule(ptype=line["ptype"], values=line["values"])
