@@ -93,8 +93,16 @@ class Adapter(persist.Adapter):
             # refresh stale connection
             bucket = self.get_bucket(refresh_conn=True)
             for line in bucket.n1ql_query(query):
-                rule = CasbinRule(ptype=line["ptype"], values=line["values"])
-                persist.load_policy_line(str(rule), model)
+                try:
+                    rule = CasbinRule(ptype=line["ptype"], values=line["values"])
+                except KeyError as err:
+                    self.logger.error(
+                        "skipping policy: %s not formatted properly and has no: %s"
+                        % (line["id"], err)
+                    )
+                    continue
+                else:
+                    persist.load_policy_line(str(rule), model)
 
     def _save_policy_line(self, ptype, rule):
         line = CasbinRule(ptype=ptype, values=rule)
