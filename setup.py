@@ -9,7 +9,6 @@ setuptools.setup(
     name="casbin_couchbase_adapter",
     version="0.1.0",
     author='Jesse Cooper',
-    author_email='jesse.cooper@sciencelogic.com',
     description="Couchbase Adapter for PyCasbin",
     long_description=long_description,
     long_description_content_type="text/markdown",
