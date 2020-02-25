@@ -7,8 +7,9 @@ with open(desc_file, "r") as fh:
 
 setuptools.setup(
     name="casbin_couchbase_adapter",
-    version="0.1.0",
-    author='Jesse Cooper',
+    version="0.1.1",
+    author='ScienceLogic',
+    url="https://github.com/ScienceLogic/casbin-couchbase-adapter",
     description="Couchbase Adapter for PyCasbin",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -16,7 +17,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=['casbin>=0.2', 'couchbase'],
     python_requires=">=3.5",
-    license="MIT",
+    license="Apache2",
     classifiers=[
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
