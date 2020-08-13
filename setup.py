@@ -1,6 +1,6 @@
 from codecs import open
 from os import path
-from setuptools import setup
+from setuptools import setup, find_packages
 
 desc_file = "README.md"
 
@@ -24,7 +24,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     keywords=["casbin", "Couchbase", "casbin-adapter", "rbac", "access control", "abac", "acl", "permission"],
-    packages=setuptools.find_packages(),
+    packages=find_packages(),
     install_requires=install_requires,
     python_requires=">=3.5",
     license="Apache2",
