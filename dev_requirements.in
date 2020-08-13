@@ -1,0 +1,7 @@
+pre-commit
+black
+pytest
+pytest-cov
+coverage
+bumpversion
+pip-tools

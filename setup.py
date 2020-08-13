@@ -1,11 +1,21 @@
-import setuptools
+from codecs import open
+from os import path
+from setuptools import setup
 
 desc_file = "README.md"
+
+here = path.abspath(path.dirname(__file__))
+# get the dependencies and installs
+with open(path.join(here, 'requirements.txt'), encoding='utf-8') as f:
+    all_reqs = f.read().split('\n')
+
+install_requires = [x.strip() for x in all_reqs if 'git+' not in x and '#' not in x and '--' != x[:2:]]
+dependency_links = [x.strip().replace('git+', '') for x in all_reqs if x.startswith('git+')]
 
 with open(desc_file, "r") as fh:
     long_description = fh.read()
 
-setuptools.setup(
+setup(
     name="casbin_couchbase_adapter",
     version="0.1.1",
     author='ScienceLogic',
@@ -15,7 +25,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     keywords=["casbin", "Couchbase", "casbin-adapter", "rbac", "access control", "abac", "acl", "permission"],
     packages=setuptools.find_packages(),
-    install_requires=['casbin>=0.2', 'couchbase'],
+    install_requires=install_requires,
     python_requires=">=3.5",
     license="Apache2",
     classifiers=[

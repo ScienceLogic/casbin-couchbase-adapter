@@ -1,0 +1,2 @@
+include read_meta.py
+include requirements.txt
