@@ -1,6 +1,8 @@
-casbin>=0.8.4
-couchbase>=2.5.0,<3.0.0
-decorator>=4.4.2
-py>=1.9.0
+bracex==2.2.1
+casbin==1.15.2
+couchbase==2.5.12
+decorator==5.1.0
+py==1.11.0
 retry==0.9.2
-simpleeval==0.9.10
+simpleeval==0.9.11
+wcmatch==8.3
