@@ -17,7 +17,7 @@ with open(desc_file, "r") as fh:
 
 setup(
     name="casbin_couchbase_adapter",
-    version="0.1.3",
+    version="0.1.4",
     author='ScienceLogic',
     url="https://github.com/ScienceLogic/casbin-couchbase-adapter",
     description="Couchbase Adapter for PyCasbin",

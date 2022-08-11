@@ -17,6 +17,26 @@ from couchbase.n1ql import N1QLQuery
 from couchbase.n1ql import STATEMENT_PLUS
 
 
+
+def load_policy_line(tokens, model):
+    """loads a text line as a policy rule to model."""
+    if isinstance(tokens, str):
+        persist.load_policy_line(tokens, model)
+    elif isinstance(tokens, (list, tuple)):
+        if not tokens:
+            return
+
+        key = tokens[0]
+        sec = key[0]
+
+        if sec not in model.model.keys():
+            return
+
+        if key not in model.model[sec].keys():
+            return
+
+        model.model[sec][key].policy.append(tokens[1:])
+
 class CasbinPoliciesNotFound(Exception):
     pass
 
@@ -39,6 +59,9 @@ class CasbinRule:
 
     def __repr__(self):
         return '<CasbinRule {}: "{}">'.format(self.id, str(self))
+
+    def to_list(self):
+        return [self.ptype] + self.values
 
 
 class Adapter(persist.Adapter):
@@ -88,7 +111,7 @@ class Adapter(persist.Adapter):
                     )
                     continue
                 else:
-                    persist.load_policy_line(str(rule), model)
+                    load_policy_line(rule.to_list(), model)
         except (CouchbaseNetworkError, CouchbaseTransientError):
             # refresh stale connection
             bucket = self.get_bucket(refresh_conn=True)
@@ -102,7 +125,7 @@ class Adapter(persist.Adapter):
                     )
                     continue
                 else:
-                    persist.load_policy_line(str(rule), model)
+                    load_policy_line(rule.to_list(), model)
 
     def _save_policy_line(self, ptype, rule):
         line = CasbinRule(ptype=ptype, values=rule)
