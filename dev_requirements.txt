@@ -1,5 +1,5 @@
 attrs==21.2.0
-backports.entry-points-selectable==1.1.1
+backports-entry-points-selectable==1.1.1
 black==21.12b0
 bump2version==1.0.1
 bumpversion==0.6.0
@@ -29,7 +29,7 @@ toml==0.10.2
 tomli==1.2.3
 typing-extensions==4.0.1
 virtualenv==20.10.0
-wheel==0.37.0
+wheel==0.38.1
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
