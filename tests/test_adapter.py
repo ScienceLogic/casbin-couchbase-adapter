@@ -3,14 +3,14 @@ import time
 import csv
 import pytest
 import casbin
-from couchbase.n1ql import N1QLQuery
 from casbin_couchbase_adapter import Adapter
 from casbin_couchbase_adapter import CasbinRule
 
 
 @pytest.fixture
 def adapter_fixture():
-    yield Adapter("couchbase://localhost:8091", "content", "isadmin", "isadmin")
+    # by default 8091 PORT is used
+    yield Adapter("couchbase://localhost", "content", "isadmin", "isadmin")
 
 
 @pytest.fixture
@@ -21,6 +21,7 @@ def enforcer_fixture(adapter_fixture):
         csv_reader = csv.reader(file, delimiter=",")
         for line in csv_reader:
             record = CasbinRule(ptype=line[0], values=line[1::])
+            cluster = adapter_fixture._cluster
             bucket = adapter_fixture.get_bucket()
             bucket.upsert(record.id, record.__dict__())
     time.sleep(1)
@@ -31,9 +32,9 @@ def enforcer_fixture(adapter_fixture):
     )
 
     # remove rules
-    bucket.n1ql_query(
-        N1QLQuery(r'DELETE FROM content WHERE meta().id LIKE "casbin_rule%%"')
-    ).execute()
+    cluster.query(
+        'DELETE FROM content WHERE meta().id LIKE "casbin_rule%%"'
+    )
     time.sleep(1)
 
 

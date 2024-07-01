@@ -7,14 +7,17 @@ import logging
 from hashlib import sha256
 from retry import retry
 from casbin import persist
-from couchbase.cluster import Cluster, PasswordAuthenticator
+from couchbase.cluster import Cluster
+from couchbase.auth import PasswordAuthenticator
+from couchbase.options import ClusterOptions, QueryOptions
+from couchbase.n1ql import QueryScanConsistency
 from couchbase.exceptions import (
-    CouchbaseNetworkError,
-    CouchbaseTransientError,
-    HTTPError,
+    CouchbaseException,
+    TransactionException,
+    HTTPException,
+    RequestCanceledException,
+    UnAmbiguousTimeoutException
 )
-from couchbase.n1ql import N1QLQuery
-from couchbase.n1ql import STATEMENT_PLUS
 
 
 class CasbinPoliciesNotFound(Exception):
@@ -48,10 +51,16 @@ class Adapter(persist.Adapter):
 
     def __init__(self, host, bucket, user, passwd):
         self.logger = logging.getLogger()
-        self._cluster = Cluster(host)
-        authenticator = PasswordAuthenticator(user, passwd)
-        self._cluster.authenticate(authenticator)
+        self._cluster = self.initialize_db_connection(host, user, passwd)
         self._bucket_name = bucket
+
+    @retry(UnAmbiguousTimeoutException, tries=3, delay=1, backoff=1, max_delay=3)
+    def initialize_db_connection(self, host, user, passwd):
+        # by default 8091 PORT is used
+        cluster = Cluster(host,
+                          ClusterOptions(PasswordAuthenticator(user, passwd))
+                          )
+        return cluster
 
     @property
     def _bucket(self):
@@ -65,20 +74,19 @@ class Adapter(persist.Adapter):
         if self._bucket and not refresh_conn:
             return self._bucket
         else:
-            self._bucket = self._cluster.open_bucket(self._bucket_name)
+            self._bucket = self._cluster.bucket(self._bucket_name).default_collection()
             return self._bucket
 
-    @retry(HTTPError, tries=10, delay=1, backoff=1, max_delay=5)
+    @retry(HTTPException, tries=10, delay=1, backoff=1, max_delay=5)
     def load_policy(self, model):
         """loads all policy rules from the storage."""
-        bucket = self.get_bucket()
-        query = N1QLQuery(
+        query = (
             r"SELECT meta().id, ptype, `values` FROM %s WHERE meta().id "
             r'LIKE "casbin_rule%%"' % self._bucket_name
         )
-        query.consistency = STATEMENT_PLUS
+        query_opts = QueryOptions(scan_consistency=QueryScanConsistency.REQUEST_PLUS)
         try:
-            for line in bucket.n1ql_query(query):
+            for line in self._cluster.query(query, query_opts):
                 try:
                     rule = CasbinRule(ptype=line["ptype"], values=line["values"])
                 except KeyError as err:
@@ -89,10 +97,9 @@ class Adapter(persist.Adapter):
                     continue
                 else:
                     persist.load_policy_line(str(rule), model)
-        except (CouchbaseNetworkError, CouchbaseTransientError):
+        except (CouchbaseException, TransactionException):
             # refresh stale connection
-            bucket = self.get_bucket(refresh_conn=True)
-            for line in bucket.n1ql_query(query):
+            for line in self._cluster.query(query, query_opts):
                 try:
                     rule = CasbinRule(ptype=line["ptype"], values=line["values"])
                 except KeyError as err:
@@ -110,7 +117,7 @@ class Adapter(persist.Adapter):
         bucket = self.get_bucket()
         try:
             bucket.upsert(line.id, line.__dict__())
-        except CouchbaseNetworkError:
+        except TransactionException:
             # refresh stale connection
             bucket = self.get_bucket(refresh_conn=True)
             bucket.upsert(line.id, line.__dict__())
@@ -135,7 +142,7 @@ class Adapter(persist.Adapter):
         query = "%s_%s" % ("casbin_rule", sha256("_".join(rule).encode()).hexdigest())
         try:
             bucket.remove(query)
-        except CouchbaseNetworkError:
+        except TransactionException:
             # refresh stale connection
             bucket = self.get_bucket(refresh_conn=True)
             bucket.remove(query)
