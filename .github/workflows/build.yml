@@ -14,25 +14,21 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
         with:
-          node-version: '18'
-
-      - name: Setup
-        run: npm install -g semantic-release @semantic-release/github @semantic-release/changelog @semantic-release/commit-analyzer @semantic-release/git @semantic-release/release-notes-generator semantic-release-pypi
-
-      - name: Set up python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-
-      - name: Install setuptools
-        run: python -m pip install --upgrade setuptools wheel twine
-
-      - name: Release
+          python-version: '3.x'
+      - name: Install twine
+        run: |
+          pip install twine
+          pip install wheel
+          pip install setuptools
+      - name: Upload wheel
+        if: ${{ github.ref == 'refs/heads/master' }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-        run: npx semantic-release
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+          TWINE_NON_INTERACTIVE: 1
+        run: |
+          python setup.py bdist_wheel
+          twine upload dist/*.whl
