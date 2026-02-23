@@ -32,9 +32,10 @@ def enforcer_fixture(adapter_fixture):
     )
 
     # remove rules
-    cluster.query(
-        'DELETE FROM content WHERE meta().id LIKE "casbin_rule%%"'
+    query = cluster.query(
+        'DELETE FROM content WHERE meta().id LIKE "casbin_rule%"'
     )
+    query.execute()
     time.sleep(1)
 
 
@@ -101,3 +102,37 @@ def test_repr():
 def test_dict():
     rule = CasbinRule(ptype="p", values=["alice", "data1", "read"])
     assert rule.__dict__() == {"ptype": "p", "values": ["alice", "data1", "read"]}
+
+@pytest.mark.parametrize(
+    "owner_name, role",
+    [
+        ("Alice, LastName", "data2_admin"),
+        ("Test\team", "data2_admin"),
+        ("Test\deam", "data2_admin"),
+        ("Alice<LastName,attribute", "data2_admin"),
+        ("12335478.?;,", "data2_admin"),
+    ],
+    ids=[
+        "owner_name with comma",
+        "invalid",
+        "with slashes",
+        "with < and comma",
+        "numbers and especial characters",
+    ],
+)
+def test_save_remove_policy_with_commas(enforcer_fixture, owner_name, role):
+    e = enforcer_fixture
+    assert e.enforce(owner_name, "data4", "read") is False
+
+    # save
+    e.add_policy(role, "data4", "read")
+    e.add_grouping_policy(owner_name, role)
+    adapter = e.get_adapter()
+    adapter.save_policy(e.get_model())
+    assert e.enforce(owner_name, "data4", "read") is True
+
+    #remove
+    assert adapter.remove_policy("g","g",[owner_name, role])
+    assert e.delete_permission_for_user(role, "data4", "read")
+    adapter.save_policy(e.get_model())
+    assert e.enforce(owner_name, "data4", "read") is False

@@ -77,6 +77,29 @@ class Adapter(persist.Adapter):
             self._bucket = self._cluster.bucket(self._bucket_name).default_collection()
             return self._bucket
 
+    def _load_policy_line(self, model, line):
+        try:
+            rule = CasbinRule(ptype=line["ptype"], values=line["values"])
+        except KeyError as err:
+            self.logger.error(
+                "skipping policy: %s not formatted properly and has no: %s"
+                % (line["id"], err)
+            )
+        else:
+            if not rule.ptype:
+                return
+            sec = rule.ptype
+            if sec not in model.model.keys():
+                return
+            if rule.ptype not in model.model[sec].keys():
+                return
+            if rule.values[:1] == "#":
+                return
+
+            rule_values = [v for v in rule.values if v is not None and v != ""]
+
+            model.model[sec][rule.ptype].policy.append(rule_values)
+
     @retry(HTTPException, tries=10, delay=1, backoff=1, max_delay=5)
     def load_policy(self, model):
         """loads all policy rules from the storage."""
@@ -87,29 +110,11 @@ class Adapter(persist.Adapter):
         query_opts = QueryOptions(scan_consistency=QueryScanConsistency.REQUEST_PLUS)
         try:
             for line in self._cluster.query(query, query_opts):
-                try:
-                    rule = CasbinRule(ptype=line["ptype"], values=line["values"])
-                except KeyError as err:
-                    self.logger.error(
-                        "skipping policy: %s not formatted properly and has no: %s"
-                        % (line["id"], err)
-                    )
-                    continue
-                else:
-                    persist.load_policy_line(str(rule), model)
+                self._load_policy_line(model, line)
         except (CouchbaseException, TransactionException):
             # refresh stale connection
             for line in self._cluster.query(query, query_opts):
-                try:
-                    rule = CasbinRule(ptype=line["ptype"], values=line["values"])
-                except KeyError as err:
-                    self.logger.error(
-                        "skipping policy: %s not formatted properly and has no: %s"
-                        % (line["id"], err)
-                    )
-                    continue
-                else:
-                    persist.load_policy_line(str(rule), model)
+                self._load_policy_line(model, line)
 
     def _save_policy_line(self, ptype, rule):
         line = CasbinRule(ptype=ptype, values=rule)
